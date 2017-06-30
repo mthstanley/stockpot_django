@@ -10,7 +10,12 @@ https://docs.djangoproject.com/en/1.11/howto/deployment/wsgi/
 import os
 
 from django.core.wsgi import get_wsgi_application
+from django.conf import settings
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stockpot.settings")
+
+# load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(os.path.join(settings.BASE_DIR, settings.DOTEN_PATH))
 
 application = get_wsgi_application()

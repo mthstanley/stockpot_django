@@ -16,6 +16,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stockpot.settings")
 
 # load environment variables from .env file
 from dotenv import load_dotenv
-load_dotenv(os.path.join(settings.BASE_DIR, settings.DOTEN_PATH))
+load_dotenv(os.path.join(settings.BASE_DIR, settings.DOTENV_PATH))
 
 application = get_wsgi_application()

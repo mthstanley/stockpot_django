@@ -15,10 +15,13 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.contrib import admin
+from django.conf.urls import include
+from django.views.generic import RedirectView
 
 from recipes import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^$', views.home_page, name='home'),
+    url(r'^recipes/', include('recipes.urls')),
+    url(r'^$', RedirectView.as_view(url='/recipes/', permanent=True)),
 ]

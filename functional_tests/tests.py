@@ -61,6 +61,9 @@ class NewVisitorTest(LiveServerTestCase):
         self.assertIn('Welcome, julia!', header_text)
 
         # she is done viewing the website and would now like to logout
+        # she sees the account toggle button and clicks it
+        self.browser.find_element_by_css_selector('ul.navbar-right a.dropdown-toggle').click()
+        # she sees the logout link and clicks it
         logout_link = self.browser.find_element_by_id('logout')
         logout_link.click()
 

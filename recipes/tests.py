@@ -17,3 +17,10 @@ class HomePageTest(TestCase):
         response = self.client.get('/recipes/')
         self.assertTemplateUsed(response, 'home.html')
 
+
+class LoginTests(TestCase):
+
+
+    def test_login_urls_setup(self):
+        response = self.client.get('/accounts/login/')
+        self.assertEqual(response.status_code, 200)

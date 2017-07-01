@@ -22,3 +22,10 @@ class NewVisitorTest(LiveServerTestCase):
 
         # he notices Recipes in the title
         self.assertIn('Recipes', self.browser.title)
+
+        # the header of the page welcomes him as a stranger
+        header_text = self.browser.find_element_by_tag_name('h1').text
+        self.assertIn('Welcome, Stranger!', header_text)
+
+        # he sees a link to login
+        login_link = self.browser.find_element_by_id('login')

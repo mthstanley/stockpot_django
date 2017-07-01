@@ -1,6 +1,10 @@
 <html>
     <title>Recipes</title>
 
-    <h1>Welcome, Stranger!</h1>
+    {% if user.is_authenticated %}
+        <h1>Welcome, {{ user.username }}!</h1>
+    {% else %}
+        <h1>Welcome, Stranger!</h1>
+    {% endif %}
     <a id="login" href="{% url 'login' %}">Login</a>
 </html>

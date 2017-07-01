@@ -44,3 +44,17 @@ class LoginTests(TestCase):
 
         user = auth.get_user(self.client)
         self.assertTrue(user.is_authenticated())
+
+    def test_user_can_logout(self):
+        self.client.login(**self.credentials)
+
+        self.client.get('/accounts/logout/')
+
+        # should be AnonymousUser which is not authenticated
+        user = auth.get_user(self.client)
+        self.assertFalse(user.is_authenticated())
+
+    def test_uses_logout_template(self):
+        response = self.client.get('/accounts/logout/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'registration/logged_out.html')

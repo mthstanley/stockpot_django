@@ -34,7 +34,7 @@ class NewVisitorTest(LiveServerTestCase):
         header_text = self.browser.find_element_by_tag_name('h1').text
         self.assertIn('Welcome, Stranger!', header_text)
 
-    def test_can_login(self):
+    def test_can_login_logout(self):
 
         # Julia wants a website where she can store her recipes, she has heard
         # about stockpot and decides to try it out
@@ -59,6 +59,15 @@ class NewVisitorTest(LiveServerTestCase):
         # she sees that now the webpage welcomes her
         header_text = self.browser.find_element_by_tag_name('h1').text
         self.assertIn('Welcome, julia!', header_text)
+
+        # she is done viewing the website and would now like to logout
+        logout_link = self.browser.find_element_by_id('logout')
+        logout_link.click()
+
+        # she is told she successfully logged out and is welcomed to login again
+        header_text = self.browser.find_element_by_tag_name('h1').text
+        self.assertIn("You've been successfully logged out", header_text)
+        self.browser.find_element_by_id('login')
 
 
 

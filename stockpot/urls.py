@@ -23,6 +23,7 @@ from recipes import views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^accounts/', include('django.contrib.auth.urls')),
+    url(r'^users/', include('users.urls')),
     url(r'^recipes/', include('recipes.urls')),
     url(r'^$', RedirectView.as_view(url='/recipes/', permanent=True)),
 ]

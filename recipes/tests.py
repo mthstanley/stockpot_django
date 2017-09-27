@@ -5,7 +5,8 @@ from django.contrib.auth import get_user
 from django.contrib.auth.models import User
 
 
-from recipes.views import home
+from .views import home
+from .models import Recipe
 
 
 class HomePageTest(TestCase):
@@ -60,3 +61,63 @@ class LoginTests(TestCase):
         response = self.client.get(reverse('logout'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'registration/logged_out.html')
+
+
+class RecipeCrudTest(TestCase):
+
+    def test_create_recipe_exists(self):
+        response = self.client.get(reverse('create_recipe'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_uses_create_recipe_template(self):
+        response = self.client.get(reverse('create_recipe'))
+        self.assertTemplateUsed(response, 'create_recipe.html')
+
+    def test_redirect_to_recipe_detail_view_on_create(self):
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'})
+        recipe = Recipe.objects.get(title='Tomato Soup')
+        self.assertRedirects(response, reverse('show_recipe', args=[recipe.id]))
+
+    def test_can_save_a_POST_request(self):
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'}, follow=True)
+
+        self.assertEqual(Recipe.objects.count(), 1)
+        new_recipe = Recipe.objects.first()
+        self.assertEqual(new_recipe.title, 'Tomato Soup')
+
+        self.assertIn('Tomato Soup', response.content.decode())
+        self.assertTemplateUsed(response, 'show_recipe.html')
+
+    def test_can_pass_new_recipe_id_to_show_recipe(self):
+        new_recipe = Recipe()
+        new_recipe.title = 'Tomato Soup'
+        new_recipe.save()
+        response = self.client.get(reverse('show_recipe', args=[new_recipe.id]))
+        self.assertIn('Tomato Soup', response.content.decode())
+
+    def test_only_saves_recipes_when_necessary(self):
+        self.client.get(reverse('create_recipe'))
+        self.assertEqual(Recipe.objects.count(), 0)
+
+
+class RecipeModelTest(TestCase):
+
+    def test_saving_and_retrieving_recipes(self):
+        first_recipe_title = 'Tomato Soup'
+        second_recipe_title = 'Grilled Cheese'
+
+        first_recipe = Recipe()
+        first_recipe.title = first_recipe_title
+        first_recipe.save()
+
+        second_recipe = Recipe()
+        second_recipe.title = second_recipe_title
+        second_recipe.save()
+
+        saved_recipes = Recipe.objects.all()
+        self.assertEqual(saved_recipes.count(), 2)
+
+        first_saved_recipe = saved_recipes[0]
+        second_saved_recipe = saved_recipes[1]
+        self.assertEqual(first_saved_recipe.title, first_recipe_title)
+        self.assertEqual(second_saved_recipe.title, second_recipe_title)

@@ -1,6 +1,7 @@
 from django.test import LiveServerTestCase
 from django.core.urlresolvers import reverse
-from django.contrib import auth
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import WebDriverException
@@ -12,14 +13,22 @@ class NewVisitorTest(LiveServerTestCase):
 
     def setUp(self):
         self.browser = webdriver.Firefox()
-        self.credentials = {
+        self.julia_credentials = {
                     'username':'julia',
                     'email': 'julia@example.com',
                     'password': 'julia'
                 }
+        self.henry_credentials = {
+                    'username':'henry',
+                    'email': 'henry@example.com',
+                    'password': 'henry'
+                }
+        self.user_henry = User.objects.create_user(**self.henry_credentials)
+
 
     def tearDown(self):
         self.browser.quit()
+        User.objects.all().delete()
 
     def wait_for(self, fn):
         start_time = time.time()
@@ -30,6 +39,16 @@ class NewVisitorTest(LiveServerTestCase):
                 if time.time() - start_time > MAX_WAIT:
                     raise e
                 time.sleep(0.5)
+
+
+    def login_user(self, username, password):
+        self.client.login(username=username, password=password)
+        cookie = self.client.cookies['sessionid']
+        self.browser.get(self.live_server_url)
+        self.browser.add_cookie({'name': 'sessionid', 'value': cookie.value, 'secure': False, 'path': '/'})
+        self.browser.refresh() #need to update page for logged in user
+        self.browser.get(self.live_server_url)
+
 
     def test_can_visit_website(self):
 
@@ -111,3 +130,38 @@ class NewVisitorTest(LiveServerTestCase):
         header_text = self.browser.find_element_by_tag_name('h1').text
         self.assertIn('Welcome, julia!', header_text)
 
+
+    def test_can_create_recipe_and_view_later(self):
+        self.browser.get(self.live_server_url)
+
+        # after signing up for an account Henry would like to create a recipe
+        # first he logs in
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+
+        # he then clicks on the account button to find the create new recipe button
+        # in the dropdown menu
+        self.browser.find_element_by_css_selector('ul.navbar-right a.dropdown-toggle').click()
+        self.browser.find_element_by_id('create_recipe').click()
+
+        # he is brought to a new page with a form for creating a recipe
+        self.assertIn(reverse('create_recipe'), self.browser.current_url)
+
+        # he fills out the recipe title in the form
+        recipe_title = 'Tomato Soup'
+        title_input = self.browser.find_element_by_id('id_title')
+        title_input.send_keys(recipe_title)
+        self.browser.find_element_by_css_selector('input[type="submit"]').click()
+
+        # when he hits submit he is redirected to the detail view of the recipe
+        header_text = self.browser.find_element_by_tag_name('h1').text
+        self.assertIn(recipe_title, header_text)
+
+        # he then clicks the home link and find the list view of the recipe he created
+        self.browser.find_element_by_link_text("Home").click()
+        #recipe_list = self.browser.find_element_by_id('id_recipe_list')
+        #items = recipe_list.find_elements_by_tag_name('ul')
+        #self.assertTrue(
+        #    any(item.text == recipe_title for item in items)
+        #)
+
+        self.fail('Finish the test!')

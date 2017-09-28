@@ -21,6 +21,15 @@ class HomePageTest(TestCase):
         response = self.client.get(reverse('home'))
         self.assertTemplateUsed(response, 'home.html')
 
+    def test_displays_all_list_items(self):
+        Recipe.objects.create(title='Tomato Soup')
+        Recipe.objects.create(title='Grilled Cheese')
+
+        response = self.client.get(reverse('home'))
+
+        self.assertIn('Tomato Soup', response.content.decode())
+        self.assertIn('Grilled Cheese', response.content.decode())
+
 
 class LoginTests(TestCase):
 
@@ -74,19 +83,18 @@ class RecipeCrudTest(TestCase):
         self.assertTemplateUsed(response, 'create_recipe.html')
 
     def test_redirect_to_recipe_detail_view_on_create(self):
-        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'})
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'}, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertRedirects(response, reverse('show_recipe', args=[recipe.id]))
+        self.assertIn('Tomato Soup', response.content.decode())
+        self.assertTemplateUsed(response, 'show_recipe.html')
 
     def test_can_save_a_POST_request(self):
-        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'}, follow=True)
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'})
 
         self.assertEqual(Recipe.objects.count(), 1)
         new_recipe = Recipe.objects.first()
         self.assertEqual(new_recipe.title, 'Tomato Soup')
-
-        self.assertIn('Tomato Soup', response.content.decode())
-        self.assertTemplateUsed(response, 'show_recipe.html')
 
     def test_can_pass_new_recipe_id_to_show_recipe(self):
         new_recipe = Recipe()

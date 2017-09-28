@@ -5,4 +5,10 @@
     {% else %}
         <h1>Welcome, Stranger!</h1>
     {% endif %}
+
+    <ul id="id_recipe_list">
+        {% for recipe in recipes %}
+            <li>{{ recipe.title }}</li>
+        {% endfor %}
+    </ul>
 {% endblock %}

@@ -158,10 +158,8 @@ class NewVisitorTest(LiveServerTestCase):
 
         # he then clicks the home link and find the list view of the recipe he created
         self.browser.find_element_by_link_text("Home").click()
-        #recipe_list = self.browser.find_element_by_id('id_recipe_list')
-        #items = recipe_list.find_elements_by_tag_name('ul')
-        #self.assertTrue(
-        #    any(item.text == recipe_title for item in items)
-        #)
+        recipe_list = self.browser.find_element_by_id('id_recipe_list')
+        recipes = recipe_list.find_elements_by_tag_name('li')
+        self.assertIn(recipe_title, [recipe.text for recipe in recipes])
 
         self.fail('Finish the test!')

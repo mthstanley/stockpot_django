@@ -5,15 +5,13 @@ from .models import Recipe
 
 # Create your views here.
 def home(request):
-    return render(request, 'home.html')
+    recipes = Recipe.objects.all()
+    return render(request, 'home.html', {'recipes':recipes})
 
 
 def create_recipe(request):
     if request.method == 'POST':
-        recipe = Recipe()
-        recipe.title = request.POST.get('recipe_title', '')
-        recipe.save()
-
+        recipe = Recipe.objects.create(title=request.POST.get('recipe_title', ''))
         return redirect(reverse('show_recipe', args=[recipe.id]))
 
     return render(request, 'create_recipe.html', {'form':None})

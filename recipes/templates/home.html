@@ -8,7 +8,9 @@
 
     <ul id="id_recipe_list">
         {% for recipe in recipes %}
-            <li>{{ recipe.title }}</li>
+            <li>
+                {% include 'recipe.html' with detail=False recipe=recipe %}
+            </li>
         {% endfor %}
     </ul>
 {% endblock %}

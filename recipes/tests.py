@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 
 from .views import home
 from .models import Recipe
+from users.models import Profile
 
 
 class HomePageTest(TestCase):
@@ -74,15 +75,27 @@ class LoginTests(TestCase):
 
 class RecipeCrudTest(TestCase):
 
+
+    def setUp(self):
+        self.credentials = {
+                    'username':'username',
+                    'email': 'email@example.com',
+                    'password': 'password',
+                }
+        self.test_user = User.objects.create_user(**self.credentials)
+
     def test_create_recipe_exists(self):
+        self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
         self.assertEqual(response.status_code, 200)
 
     def test_uses_create_recipe_template(self):
+        self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
         self.assertTemplateUsed(response, 'create_recipe.html')
 
     def test_redirect_to_recipe_detail_view_on_create(self):
+        self.client.login(**self.credentials)
         response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'}, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertRedirects(response, reverse('show_recipe', args=[recipe.id]))
@@ -90,6 +103,7 @@ class RecipeCrudTest(TestCase):
         self.assertTemplateUsed(response, 'show_recipe.html')
 
     def test_can_save_a_POST_request(self):
+        self.client.login(**self.credentials)
         response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'})
 
         self.assertEqual(Recipe.objects.count(), 1)
@@ -104,8 +118,22 @@ class RecipeCrudTest(TestCase):
         self.assertIn('Tomato Soup', response.content.decode())
 
     def test_only_saves_recipes_when_necessary(self):
+        self.client.login(**self.credentials)
         self.client.get(reverse('create_recipe'))
         self.assertEqual(Recipe.objects.count(), 0)
+
+    def test_must_be_logged_in_to_create_recipe(self):
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title':'Tomato Soup'}, follow=True)
+        self.assertRedirects(response, reverse('login')+'?next='+reverse('create_recipe'))
+        self.assertEquals(Recipe.objects.count(), 0)
+
+    def test_recipes_saves_author_on_create(self):
+        self.client.login(**self.credentials)
+        response = self.client.post(reverse('create_recipe'), data={'recipe_title': 'Tomato Soup'}, follow=True)
+        recipe = Recipe.objects.get(title='Tomato Soup')
+        self.assertIsNotNone(recipe.author)
+        self.assertTrue(isinstance(recipe.author, Profile))
+
 
 
 class RecipeModelTest(TestCase):

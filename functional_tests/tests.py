@@ -160,6 +160,9 @@ class NewVisitorTest(LiveServerTestCase):
         self.browser.find_element_by_link_text("Home").click()
         recipe_list = self.browser.find_element_by_id('id_recipe_list')
         recipes = recipe_list.find_elements_by_tag_name('li')
-        self.assertIn(recipe_title, [recipe.text for recipe in recipes])
+        self.assertIn(recipe_title, [recipe.find_element_by_tag_name('h1').text for recipe in recipes])
+
+        # he also notices that it also displays his username as the author of the recipe
+        self.assertIn(self.henry_credentials['username'], recipes[0].find_element_by_tag_name('h2').text)
 
         self.fail('Finish the test!')

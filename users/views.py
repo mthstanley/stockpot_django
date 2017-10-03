@@ -1,5 +1,6 @@
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 
 # Create your views here.
@@ -16,3 +17,7 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'registration/register.html', {'form':form})
+
+def show_profile(request, username):
+    user = User.objects.get(username=username)
+    return render(request, 'show_profile.html', {'display_user':user})

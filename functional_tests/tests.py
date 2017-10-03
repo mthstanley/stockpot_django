@@ -157,7 +157,7 @@ class NewVisitorTest(LiveServerTestCase):
         self.assertIn(recipe_title, header_text)
 
         # he then clicks the home link and find the list view of the recipe he created
-        self.browser.find_element_by_link_text("Home").click()
+        self.browser.find_element_by_link_text('Home').click()
         recipe_list = self.browser.find_element_by_id('id_recipe_list')
         recipes = recipe_list.find_elements_by_tag_name('li')
         self.assertIn(recipe_title, [recipe.find_element_by_tag_name('h1').text for recipe in recipes])
@@ -165,4 +165,19 @@ class NewVisitorTest(LiveServerTestCase):
         # he also notices that it also displays his username as the author of the recipe
         self.assertIn(self.henry_credentials['username'], recipes[0].find_element_by_tag_name('h2').text)
 
-        self.fail('Finish the test!')
+    def test_user_profile_page(self):
+        self.browser.get(self.live_server_url)
+
+        # henry logs on and would like to view his profile page
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+
+        # he clicks on the profile link
+        self.browser.find_element_by_link_text('Profile').click()
+        self.assertIn(
+                reverse('show_profile',
+                    args=[self.henry_credentials['username']]),
+                self.browser.current_url)
+
+        # he sees his profile information
+        username = self.browser.find_element_by_tag_name('h1')
+        self.assertEquals(self.henry_credentials['username'], username.text)

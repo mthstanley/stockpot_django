@@ -52,7 +52,20 @@ class UserProfileTests(TestCase):
                     'password2': 'p@33w0rd',
         }
 
+        self.credentials = {
+            'username': 'test',
+            'email': 'test@example.com',
+            'password': 'p@33w0rd',
+        }
+
     def test_user_signup_creates_user_profile(self):
         response = self.client.post(reverse('register'), self.register_credentials, follow=True)
         user = User.objects.get(username=self.register_credentials['username'])
         self.assertTrue(isinstance(user.profile, Profile))
+
+    def test_user_profile_view_exists(self):
+        user = User.objects.create(**self.credentials)
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('show_profile', args=[user.username]))
+        self.assertIsNotNone(response.context['display_user'])
+        self.assertTemplateUsed(response, 'show_profile.html')

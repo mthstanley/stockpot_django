@@ -7,6 +7,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import WebDriverException
 import time
 
+from recipes.models import Recipe
+
 MAX_WAIT = 10
 
 class NewVisitorTest(LiveServerTestCase):
@@ -164,6 +166,11 @@ class NewVisitorTest(LiveServerTestCase):
 
         # he also notices that it also displays his username as the author of the recipe
         self.assertIn(self.henry_credentials['username'], recipes[0].find_element_by_tag_name('h2').text)
+
+        # he then clicks the recipe title and is brought back to the recipe detail page
+        created_recipe = Recipe.objects.get(title=recipe_title)
+        recipes[0].find_element_by_link_text(recipe_title).click()
+        self.assertIn(reverse('show_recipe', args=[created_recipe.id]), self.browser.current_url)
 
     def test_user_profile_page(self):
         self.browser.get(self.live_server_url)

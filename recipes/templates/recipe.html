@@ -1,3 +1,3 @@
-<h1>{{ recipe.title }}</h1>
+<h1><a href="{% url 'show_recipe' recipe_id=recipe.id %}">{{ recipe.title }}</a></h1>
 <h2>{{ recipe.author.user.username }}</h2>
 {% if detail %}{% endif %}

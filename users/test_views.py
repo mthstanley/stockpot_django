@@ -6,25 +6,28 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import Profile
 
 # Create your tests here.
-class RegisterTests(TestCase):
+class RegisterViewsTests(TestCase):
 
     def setUp(self):
-        self.register_credentials = {
+        self.credentials = {
                     'username':'register',
                     'email': 'register@test.com',
                     'password1': 'p@33w0rd',
                     'password2': 'p@33w0rd',
         }
 
-
-    def test_register_template_form(self):
+    def test_uses_correct_template(self):
         response = self.client.get(reverse('register'))
         self.assertTemplateUsed(response, 'registration/register.html')
+
+    def test_uses_correct_form(self):
+        response = self.client.get(reverse('register'))
         self.assertIsInstance(response.context['form'], UserCreationForm)
 
     def test_user_can_register(self):
-        response = self.client.post(reverse('register'), self.register_credentials, follow=True)
-        self.assertIsNotNone(User.objects.get(username=self.register_credentials['username']))
+        response = self.client.post(reverse('register'),
+                self.credentials, follow=True)
+        self.assertIsNotNone(User.objects.get(username=self.credentials['username']))
 
     def test_invalid_register_form(self):
         response = self.client.post(reverse('register'), {}, follow=True)
@@ -37,12 +40,15 @@ class RegisterTests(TestCase):
         self.assertTemplateUsed(response, 'registration/register.html')
 
     def test_register_redirect(self):
-        response = self.client.post(reverse('register'), self.register_credentials, follow=True)
-        self.assertRedirects(response, expected_url=reverse('home'), status_code=302, target_status_code=200)
+        # after successfully registering, the user should be redirected
+        # to the home page
+        response = self.client.post(reverse('register'),
+                self.credentials, follow=True)
+        self.assertRedirects(response, expected_url=reverse('home'),
+                status_code=302, target_status_code=200)
 
 
-class UserProfileTests(TestCase):
-
+class UserProfileViewTests(TestCase):
 
     def setUp(self):
         self.register_credentials = {
@@ -59,7 +65,8 @@ class UserProfileTests(TestCase):
         }
 
     def test_user_signup_creates_user_profile(self):
-        response = self.client.post(reverse('register'), self.register_credentials, follow=True)
+        response = self.client.post(reverse('register'),
+                self.register_credentials, follow=True)
         user = User.objects.get(username=self.register_credentials['username'])
         self.assertTrue(isinstance(user.profile, Profile))
 

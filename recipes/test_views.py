@@ -11,13 +11,14 @@ from .forms import RecipeForm
 from users.models import Profile
 
 
-class HomePageTest(TestCase):
+class HomeViewTest(TestCase):
 
 
     def test_uses_correct_root_url(self):
         response = self.client.get('/')
         # test permanent url redirection code==301
-        self.assertRedirects(response, expected_url=reverse('home'), status_code=301, target_status_code=200)
+        self.assertRedirects(response, expected_url=reverse('home'),
+                status_code=301, target_status_code=200)
 
     def test_uses_home_template(self):
         response = self.client.get(reverse('home'))
@@ -34,6 +35,7 @@ class HomePageTest(TestCase):
 
 
 class LoginTests(TestCase):
+
 
     def setUp(self):
         self.credentials = {
@@ -54,7 +56,8 @@ class LoginTests(TestCase):
         user = get_user(self.client)
         self.assertFalse(user.is_authenticated())
 
-        response = self.client.post(reverse('login'), self.credentials, follow=True)
+        response = self.client.post(reverse('login'), self.credentials,
+                follow=True)
 
         user = get_user(self.client)
         self.assertTrue(user.is_authenticated())
@@ -86,6 +89,7 @@ class RecipeCrudTest(TestCase):
         self.test_user = User.objects.create_user(**self.credentials)
 
     def test_create_recipe_exists(self):
+        # user must be logged in to create a recipe
         self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
         self.assertEqual(response.status_code, 200)
@@ -97,7 +101,8 @@ class RecipeCrudTest(TestCase):
 
     def test_redirect_to_recipe_detail_view_on_create(self):
         self.client.login(**self.credentials)
-        response = self.client.post(reverse('create_recipe'), data={'title': 'Tomato Soup'}, follow=True)
+        response = self.client.post(reverse('create_recipe'),
+                data={'title': 'Tomato Soup'}, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertRedirects(response, reverse('show_recipe', args=[recipe.pk]))
         self.assertIn('Tomato Soup', response.content.decode())
@@ -105,7 +110,8 @@ class RecipeCrudTest(TestCase):
 
     def test_can_save_a_POST_request(self):
         self.client.login(**self.credentials)
-        response = self.client.post(reverse('create_recipe'), data={'title': 'Tomato Soup'})
+        response = self.client.post(reverse('create_recipe'),
+                data={'title': 'Tomato Soup'})
 
         self.assertEqual(Recipe.objects.count(), 1)
         new_recipe = Recipe.objects.first()
@@ -124,13 +130,17 @@ class RecipeCrudTest(TestCase):
         self.assertEqual(Recipe.objects.count(), 0)
 
     def test_must_be_logged_in_to_create_recipe(self):
-        response = self.client.post(reverse('create_recipe'), data={'title':'Tomato Soup'}, follow=True)
-        self.assertRedirects(response, reverse('login')+'?next='+reverse('create_recipe'))
+        response = self.client.post(reverse('create_recipe'),
+                data={'title':'Tomato Soup'}, follow=True)
+        login_url = reverse('login')
+        create_recipe_url = reverse('create_recipe')
+        self.assertRedirects(response, f'{login_url}?next={create_recipe_url}')
         self.assertEquals(Recipe.objects.count(), 0)
 
     def test_recipes_saves_author_on_create(self):
         self.client.login(**self.credentials)
-        response = self.client.post(reverse('create_recipe'), data={'title': 'Tomato Soup'}, follow=True)
+        response = self.client.post(reverse('create_recipe'),
+                data={'title': 'Tomato Soup'}, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertIsNotNone(recipe.author)
         self.assertTrue(isinstance(recipe.author, Profile))
@@ -138,35 +148,4 @@ class RecipeCrudTest(TestCase):
     def test_uses_recipe_form_on_create(self):
         self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
-        self.assertIsNotNone(response.context)
-        self.assertIsNotNone(response.context['form'])
         self.assertIsInstance(response.context['form'], RecipeForm)
-
-
-
-class RecipeModelTest(TestCase):
-
-    def test_saving_and_retrieving_recipes(self):
-        first_recipe_title = 'Tomato Soup'
-        second_recipe_title = 'Grilled Cheese'
-
-        first_recipe = Recipe()
-        first_recipe.title = first_recipe_title
-        first_recipe.save()
-
-        second_recipe = Recipe()
-        second_recipe.title = second_recipe_title
-        second_recipe.save()
-
-        saved_recipes = Recipe.objects.all()
-        self.assertEqual(saved_recipes.count(), 2)
-
-        first_saved_recipe = saved_recipes[0]
-        second_saved_recipe = saved_recipes[1]
-        self.assertEqual(first_saved_recipe.title, first_recipe_title)
-        self.assertEqual(second_saved_recipe.title, second_recipe_title)
-
-
-class RecipeFormTest(TestCase):
-
-    pass

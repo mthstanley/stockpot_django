@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 
 from .models import Recipe
+from .forms import RecipeForm
 
 # Create your views here.
 def home(request):
@@ -12,11 +13,17 @@ def home(request):
 @login_required
 def create_recipe(request):
     if request.method == 'POST':
-        recipe = Recipe.objects.create(title=request.POST.get('recipe_title', ''), author=request.user.profile)
-        return redirect(reverse('show_recipe', args=[recipe.id]))
+        form = RecipeForm(request.POST)
+        if form.is_valid():
+            recipe = form.save(commit=False)
+            recipe.author = request.user.profile
+            recipe.save()
+            return redirect('show_recipe', pk=recipe.pk)
+    else:
+        form = RecipeForm()
 
-    return render(request, 'create_recipe.html', {'form':None})
+    return render(request, 'create_recipe.html', {'form':form})
 
-def show_recipe(request, recipe_id):
-    recipe = Recipe.objects.get(pk=recipe_id)
+def show_recipe(request, pk):
+    recipe = Recipe.objects.get(pk=pk)
     return render(request, 'show_recipe.html', {'recipe':recipe})

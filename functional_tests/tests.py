@@ -152,7 +152,7 @@ class NewVisitorTest(LiveServerTestCase):
         recipe_title = 'Tomato Soup'
         title_input = self.browser.find_element_by_id('id_title')
         title_input.send_keys(recipe_title)
-        self.browser.find_element_by_css_selector('input[type="submit"]').click()
+        self.browser.find_element_by_css_selector('button[type="submit"]').click()
 
         # when he hits submit he is redirected to the detail view of the recipe
         header_text = self.browser.find_element_by_tag_name('h1').text
@@ -170,7 +170,7 @@ class NewVisitorTest(LiveServerTestCase):
         # he then clicks the recipe title and is brought back to the recipe detail page
         created_recipe = Recipe.objects.get(title=recipe_title)
         recipes[0].find_element_by_link_text(recipe_title).click()
-        self.assertIn(reverse('show_recipe', args=[created_recipe.id]), self.browser.current_url)
+        self.assertIn(reverse('show_recipe', args=[created_recipe.pk]), self.browser.current_url)
 
     def test_user_profile_page(self):
         self.browser.get(self.live_server_url)

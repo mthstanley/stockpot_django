@@ -1,13 +1,10 @@
-<html>
-    <head>
-        <title>Create a Recipe</title>
-    </head>
-    <body>
-        <h1>Create a Recipe</h1>
-        <form method="POST">
-            {% csrf_token %}
-            <input name="recipe_title" id="id_title" placeholder="Enter a recipe title." />
-            <input type="submit" />
-        </form>
-    </body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Create a Recipe</h1>
+    <form method="POST" class="recipe-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-default">Create</button>
+    </form>
+{% endblock %}

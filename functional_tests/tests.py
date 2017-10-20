@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, NoSuchElementException
 import time
 
 from recipes.models import Recipe
@@ -51,6 +51,12 @@ class NewVisitorTest(LiveServerTestCase):
         self.browser.refresh() #need to update page for logged in user
         self.browser.get(self.live_server_url)
 
+    def is_element_present(self, finder, locator):
+        try:
+            finder(locator)
+        except NoSuchElementException:
+            return False
+        return True
 
     def test_can_visit_website(self):
 
@@ -210,3 +216,20 @@ class NewVisitorTest(LiveServerTestCase):
 
         recipe_title = self.browser.find_element_by_tag_name('h1')
         self.assertEqual(recipe_title.text, 'Tomato Bisque')
+
+    def test_can_delete_recipe(self):
+        self.browser.get(self.live_server_url)
+
+        recipe = Recipe(title='Tomato Soup', author=self.user_henry.profile)
+        recipe.save()
+
+        # henry would like to edit a recipe he previously created
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+        self.browser.find_element_by_link_text('Tomato Soup').click()
+
+        # he sees and clicks the edit button on the recipes detail page
+        self.browser.find_element_by_link_text('Remove').click()
+
+        self.assertFalse(self.is_element_present(self.browser.find_element_by_link_text,
+            'Tomato Soup'))
+        self.assertEqual(Recipe.objects.count(), 0)

@@ -216,3 +216,44 @@ class RecipeEditViewTest(TestCase):
                 follow=True)
         self.test_recipe.refresh_from_db()
         self.assertEquals(self.test_recipe.title, 'Tomato Soup')
+
+
+class RecipeRemoveViewTest(TestCase):
+
+
+    def setUp(self):
+        self.credentials = {
+                    'username':'username',
+                    'email': 'email@example.com',
+                    'password': 'password',
+                }
+        self.test_user = User.objects.create_user(**self.credentials)
+        self.test_recipe = Recipe(title='Tomato Soup', author=self.test_user.profile)
+        self.test_recipe.save()
+
+    def test_remove_recipe_from_db(self):
+        recipe = Recipe.objects.create(title='Grilled Cheese', author=self.test_user.profile)
+
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('remove_recipe', args=[recipe.pk]))
+
+        self.assertEqual(Recipe.objects.count(), 1)
+
+    def test_must_be_logged_in_to_remove_recipe(self):
+        remove_recipe_url = reverse('remove_recipe', args=[self.test_recipe.pk])
+        response = self.client.get(remove_recipe_url, follow=True)
+        login_url = reverse('login')
+        self.assertRedirects(response, f'{login_url}?next={remove_recipe_url}')
+        self.assertEqual(Recipe.objects.count(), 1)
+
+    def test_unable_to_remove_unless_author(self):
+        remove_recipe_url = reverse('remove_recipe', args=[self.test_recipe.pk])
+        wrong_user_credentials = {
+            'username':'wrong',
+            'email': 'wrong@user.com',
+            'password': 'wronguser',
+        }
+        wrong_author = User.objects.create_user(**wrong_user_credentials)
+        logged_in = self.client.login(**wrong_user_credentials)
+        response = self.client.get(remove_recipe_url, follow=True)
+        self.assertEqual(Recipe.objects.count(), 1)

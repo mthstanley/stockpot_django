@@ -1,3 +1,6 @@
 <h1><a href="{% url 'show_recipe' pk=recipe.pk %}">{{ recipe.title }}</a></h1>
-{% if detail %}<p><a href="{% url 'edit_recipe' pk=recipe.pk %}">Edit</a></p>{% endif %}
+{% if detail %}
+    <p><a href="{% url 'edit_recipe' pk=recipe.pk %}">Edit</a></p>
+    <p><a href="{% url 'remove_recipe' pk=recipe.pk %}">Remove</a></p>
+{% endif %}
 <h2>{{ recipe.author.user.username }}</h2>

@@ -37,6 +37,15 @@ def edit_recipe(request, pk):
         return redirect('show_recipe', pk=recipe.pk)
     return render(request, 'edit_recipe.html', {'form':form})
 
+@login_required
+def remove_recipe(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if recipe.author.user != request.user:
+        raise PermissionDenied
+
+    recipe.delete()
+    return redirect('home')
+
 def show_recipe(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
     return render(request, 'show_recipe.html', {'recipe':recipe})

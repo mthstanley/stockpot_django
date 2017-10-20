@@ -1,6 +1,7 @@
-from django.shortcuts import render, redirect, reverse
-from django.http import HttpResponse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
+from django.http import HttpResponse, HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 
 from .models import Recipe
 from .forms import RecipeForm
@@ -24,6 +25,18 @@ def create_recipe(request):
 
     return render(request, 'create_recipe.html', {'form':form})
 
+@login_required
+def edit_recipe(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if recipe.author.user != request.user:
+        raise PermissionDenied
+
+    form = RecipeForm(request.POST or None, instance=recipe)
+    if form.is_valid():
+        form.save()
+        return redirect('show_recipe', pk=recipe.pk)
+    return render(request, 'edit_recipe.html', {'form':form})
+
 def show_recipe(request, pk):
-    recipe = Recipe.objects.get(pk=pk)
+    recipe = get_object_or_404(Recipe, pk=pk)
     return render(request, 'show_recipe.html', {'recipe':recipe})

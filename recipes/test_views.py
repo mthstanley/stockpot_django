@@ -77,7 +77,7 @@ class LoginTests(TestCase):
         self.assertTemplateUsed(response, 'registration/logged_out.html')
 
 
-class RecipeCrudTest(TestCase):
+class RecipeCreateViewTests(TestCase):
 
 
     def setUp(self):
@@ -117,13 +117,6 @@ class RecipeCrudTest(TestCase):
         new_recipe = Recipe.objects.first()
         self.assertEqual(new_recipe.title, 'Tomato Soup')
 
-    def test_can_pass_new_recipe_id_to_show_recipe(self):
-        new_recipe = Recipe()
-        new_recipe.title = 'Tomato Soup'
-        new_recipe.save()
-        response = self.client.get(reverse('show_recipe', args=[new_recipe.pk]))
-        self.assertIn('Tomato Soup', response.content.decode())
-
     def test_only_saves_recipes_when_necessary(self):
         self.client.login(**self.credentials)
         self.client.get(reverse('create_recipe'))
@@ -149,3 +142,77 @@ class RecipeCrudTest(TestCase):
         self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
         self.assertIsInstance(response.context['form'], RecipeForm)
+
+
+class RecipeShowViewTest(TestCase):
+
+
+    def setUp(self):
+        self.credentials = {
+                    'username':'username',
+                    'email': 'email@example.com',
+                    'password': 'password',
+                }
+        self.test_user = User.objects.create_user(**self.credentials)
+
+    def test_can_pass_new_recipe_id_to_show_recipe(self):
+        new_recipe = Recipe(title='Tomato Soup', author=self.test_user.profile)
+        new_recipe.save()
+        response = self.client.get(reverse('show_recipe', args=[new_recipe.pk]))
+        self.assertIn('Tomato Soup', response.content.decode())
+
+
+
+class RecipeEditViewTest(TestCase):
+
+
+    def setUp(self):
+        self.credentials = {
+                    'username':'username',
+                    'email': 'email@example.com',
+                    'password': 'password',
+                }
+        self.test_user = User.objects.create_user(**self.credentials)
+        self.test_recipe = Recipe(title='Tomato Soup', author=self.test_user.profile)
+        self.test_recipe.save()
+
+    def test_edit_recipe_exists(self):
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('edit_recipe', args=[self.test_recipe.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_instatiates_form_with_recipe_attributes(self):
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('edit_recipe', args=[self.test_recipe.pk]))
+        form = response.context['form']
+        self.assertEqual(form.initial['title'], self.test_recipe.title)
+
+    def test_saves_updates_to_recipe(self):
+        self.client.login(**self.credentials)
+        response = self.client.post(reverse('edit_recipe', args=[self.test_recipe.pk]),
+                data={'title':'Tomato Bisque'}, follow=True)
+        self.test_recipe.refresh_from_db()
+        self.assertEquals(self.test_recipe.title, 'Tomato Bisque')
+
+    def test_must_be_logged_in_to_create_recipe(self):
+        edit_recipe_url = reverse('edit_recipe', args=[self.test_recipe.pk])
+        response = self.client.post(edit_recipe_url, data={'title':'Tomato Bisque'},
+                follow=True)
+        self.test_recipe.refresh_from_db()
+        login_url = reverse('login')
+        self.assertRedirects(response, f'{login_url}?next={edit_recipe_url}')
+        self.assertEquals(self.test_recipe.title, 'Tomato Soup')
+
+    def test_unable_to_edit_unless_author(self):
+        edit_recipe_url = reverse('edit_recipe', args=[self.test_recipe.pk])
+        wrong_user_credentials = {
+            'username':'wrong',
+            'email': 'wrong@user.com',
+            'password': 'wronguser',
+        }
+        wrong_author = User.objects.create_user(**wrong_user_credentials)
+        logged_in = self.client.login(**wrong_user_credentials)
+        response = self.client.post(edit_recipe_url, data={'title':'Tomato Bisque'},
+                follow=True)
+        self.test_recipe.refresh_from_db()
+        self.assertEquals(self.test_recipe.title, 'Tomato Soup')

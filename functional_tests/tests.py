@@ -188,3 +188,25 @@ class NewVisitorTest(LiveServerTestCase):
         # he sees his profile information
         username = self.browser.find_element_by_tag_name('h1')
         self.assertEquals(self.henry_credentials['username'], username.text)
+
+    def test_can_edit_recipe(self):
+        self.browser.get(self.live_server_url)
+
+        recipe = Recipe(title='Tomato Soup', author=self.user_henry.profile)
+        recipe.save()
+
+        # henry would like to edit a recipe he previously created
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+        self.browser.find_element_by_link_text('Tomato Soup').click()
+
+        # he sees and clicks the edit button on the recipes detail page
+        self.browser.find_element_by_link_text('Edit').click()
+
+        title_input = self.browser.find_element_by_id('id_title')
+        # he deletes the text in the prepopulated title field
+        title_input.clear()
+        title_input.send_keys('Tomato Bisque')
+        self.browser.find_element_by_css_selector('button[type=submit]').click()
+
+        recipe_title = self.browser.find_element_by_tag_name('h1')
+        self.assertEqual(recipe_title.text, 'Tomato Bisque')

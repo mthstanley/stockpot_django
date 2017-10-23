@@ -194,7 +194,7 @@ class RecipeEditViewTest(TestCase):
         self.test_recipe.refresh_from_db()
         self.assertEquals(self.test_recipe.title, 'Tomato Bisque')
 
-    def test_must_be_logged_in_to_create_recipe(self):
+    def test_must_be_logged_in_to_edit_recipe(self):
         edit_recipe_url = reverse('edit_recipe', args=[self.test_recipe.pk])
         response = self.client.post(edit_recipe_url, data={'title':'Tomato Bisque'},
                 follow=True)

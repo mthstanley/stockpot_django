@@ -2,4 +2,7 @@
 
 {% block content %}
 <h1>{{ display_user.username }}</h1>
+<p><a href="{% url 'edit_profile' username=display_user.username %}">Edit</a></p>
+<p>{{ display_user.profile.name }}</p>
+<p>{{ display_user.profile.bio }}</p>
 {% endblock %}

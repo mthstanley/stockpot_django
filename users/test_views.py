@@ -8,6 +8,7 @@ from .models import Profile
 # Create your tests here.
 class RegisterViewsTests(TestCase):
 
+
     def setUp(self):
         self.credentials = {
                     'username':'register',
@@ -50,6 +51,7 @@ class RegisterViewsTests(TestCase):
 
 class UserProfileViewTests(TestCase):
 
+
     def setUp(self):
         self.register_credentials = {
                     'username':'register',
@@ -71,8 +73,75 @@ class UserProfileViewTests(TestCase):
         self.assertTrue(isinstance(user.profile, Profile))
 
     def test_user_profile_view_exists(self):
-        user = User.objects.create(**self.credentials)
+        user = User.objects.create_user(**self.credentials)
         self.client.login(**self.credentials)
         response = self.client.get(reverse('show_profile', args=[user.username]))
         self.assertIsNotNone(response.context['display_user'])
         self.assertTemplateUsed(response, 'show_profile.html')
+
+
+class UserProfileEditViewTest(TestCase):
+
+    def setUp(self):
+        self.credentials = {
+            'username': 'test',
+            'email': 'test@example.com',
+            'password': 'p@33w0rd',
+        }
+
+        self.user = User.objects.create_user(**self.credentials)
+
+    def test_user_edit_profile_view_exists(self):
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('edit_profile', args=[self.user.username]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_profile_updates_persist(self):
+        self.client.login(**self.credentials)
+        name = 'Monty Python'
+        bio = 'Software developer and food nerd.'
+        self.assertEqual(self.user.profile.name, '')
+        self.assertEqual(self.user.profile.bio, '')
+        response = self.client.post(reverse('edit_profile', args=[self.user.username]),
+                data={'name':name, 'bio':bio}, follow=True)
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.name, name)
+        self.assertEqual(self.user.profile.bio, bio)
+
+    def test_login_required_to_edit_profile(self):
+        name = 'Monty Python'
+        edit_profile_url = reverse('edit_profile', args=[self.user.username])
+        response = self.client.post(edit_profile_url, data={'name':name},
+                follow=True)
+        self.user.profile.refresh_from_db()
+        login_url = reverse('login')
+        self.assertRedirects(response, f'{login_url}?next={edit_profile_url}')
+        self.assertEquals(self.user.profile.name, '')
+
+    def test_can_only_edit_own_profile(self):
+        wrong_user = {
+            'username':'wrong',
+            'email':'wrong@user.com',
+            'password':'firstnamelastinitialbirthday'
+        }
+        User.objects.create_user(**wrong_user)
+        self.client.login(**wrong_user)
+        name = 'Monty Python'
+        edit_profile_url = reverse('edit_profile', args=[self.user.username])
+        response = self.client.post(edit_profile_url, data={'name':name},
+                follow=True)
+        self.assertEqual(response.status_code, 403)
+        self.user.profile.refresh_from_db()
+        self.assertEquals(self.user.profile.name, '')
+
+    def test_instatiates_form_with_profile_attributes(self):
+        name = 'Monty Python'
+        bio = 'Software developer and food nerd.'
+        self.user.profile.name = name
+        self.user.profile.bio = bio
+        self.user.profile.save()
+        self.client.login(**self.credentials)
+        response = self.client.get(reverse('edit_profile', args=[self.user.username]))
+        form = response.context['form']
+        self.assertEqual(form.initial['name'], self.user.profile.name)
+        self.assertEqual(form.initial['bio'], self.user.profile.bio)

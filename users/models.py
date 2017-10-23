@@ -7,6 +7,7 @@ from django.dispatch import receiver
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.TextField(blank=True)
+    bio = models.TextField(blank=True)
 
 
 # create and save Profile object when User object is created or saved

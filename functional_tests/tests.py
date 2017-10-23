@@ -233,3 +233,21 @@ class NewVisitorTest(LiveServerTestCase):
         self.assertFalse(self.is_element_present(self.browser.find_element_by_link_text,
             'Tomato Soup'))
         self.assertEqual(Recipe.objects.count(), 0)
+
+    def test_can_update_profile(self):
+        self.browser.get(self.live_server_url)
+
+        # henry would like to edit his profile page
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+        self.browser.find_element_by_link_text('Profile').click()
+
+        self.browser.find_element_by_link_text('Edit').click()
+        BIO = 'Food Scientist and Software Developer.'
+        bio_input = self.browser.find_element_by_id('id_bio')
+        bio_input.send_keys(BIO)
+
+        self.browser.find_element_by_css_selector('button[type=submit]').click()
+
+        self.assertIn(BIO, self.browser.page_source)
+
+

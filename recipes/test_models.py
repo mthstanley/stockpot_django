@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .models import Recipe, RecipeStep
+from .models import Recipe, RecipeStep, Ingredient, MeasuredIngredient
 
 
 class RecipeModelTest(TestCase):
@@ -52,3 +52,49 @@ class RecipeModelTest(TestCase):
         self.assertEqual(RecipeStep.objects.count(), 3)
         recipe.delete()
         self.assertEqual(RecipeStep.objects.count(), 0)
+
+    def test_add_ingredients_to_recipe(self):
+        recipe = Recipe.objects.create(title="Grilled Cheese")
+
+        ing1 = Ingredient.objects.create(name='cheese')
+        ing2 = Ingredient.objects.create(name='bread')
+        ing3 = Ingredient.objects.create(name='butter')
+
+        mi1 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing1)
+        mi2 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing2)
+        mi3 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing3)
+
+        self.assertEqual(recipe.ingredients.count(), 3)
+        self.assertIn('cheese', [ing.name for ing in recipe.ingredients.all()])
+
+    def test_keep_ingredients_on_delete_recipe(self):
+        recipe = Recipe.objects.create(title="Grilled Cheese")
+
+        ing1 = Ingredient.objects.create(name='cheese')
+        ing2 = Ingredient.objects.create(name='bread')
+        ing3 = Ingredient.objects.create(name='butter')
+
+        mi1 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing1)
+        mi2 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing2)
+        mi3 = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ing3)
+
+        recipe.delete()
+        self.assertEqual(MeasuredIngredient.objects.count(), 0)
+        self.assertEqual(Ingredient.objects.count(), 3)
+        self.assertEqual(Recipe.objects.count(), 0)
+
+    def delete_ingredient_from_all_recipes(self):
+        recipe1 = Recipe.objects.create(title="Grilled Cheese")
+        recipe2 = Recipe.objects.create(title="Cheddar Soup")
+
+        ing1 = Ingredient.objects.create(name='cheese')
+        ing2 = Ingredient.objects.create(name='butter')
+
+        mi1 = MeasuredIngredient.objects.create(recipe=recipe1, ingredient=ing1)
+        mi2 = MeasuredIngredient.objects.create(recipe=recipe1, ingredient=ing2)
+        mi3 = MeasuredIngredient.objects.create(recipe=recipe2, ingredient=ing1)
+
+        ing1.delete()
+        self.assertEqual(MeasuredIngredient.objects.count(), 1)
+        self.assertEqual(recipe2.ingredients.count(), 0)
+        self.assertEqual(recipe1.ingredients.count(), 1)

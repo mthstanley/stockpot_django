@@ -5,6 +5,12 @@
     <form method="POST" class="recipe-form">
         {% csrf_token %}
         {{ form.as_p }}
+
+        <h2>Steps</h2>
+        {{ form.stepsformset.management_form }}
+        {% for form in form.stepsformset %}
+            <p>{{ form }}</p>
+        {% endfor %}
         <button type="submit" class="btn btn-default">Create</button>
     </form>
 {% endblock %}

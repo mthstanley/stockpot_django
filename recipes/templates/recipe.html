@@ -4,3 +4,13 @@
     <p><a href="{% url 'remove_recipe' pk=recipe.pk %}">Remove</a></p>
 {% endif %}
 <h2>{{ recipe.author.user.username }}</h2>
+
+{% if detail %}
+
+    <h3>Steps</h3>
+    <ul class="steps">
+    {% for step in recipe.steps.all %}
+        <li class="step">{{ step.body }}</li>
+    {% endfor %}
+    </ul>
+{% endif %}

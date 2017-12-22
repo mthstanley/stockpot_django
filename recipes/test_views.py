@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 
 from .views import home
-from .models import Recipe
+from .models import Recipe, RecipeStep
 from .forms import RecipeForm
 from users.models import Profile
 
@@ -87,6 +87,12 @@ class RecipeCreateViewTests(TestCase):
                     'password': 'password',
                 }
         self.test_user = User.objects.create_user(**self.credentials)
+        self.base_steps_managementform = {
+                    'steps-TOTAL_FORMS':0,
+                    'steps-INITIAL_FORMS':0,
+                    'steps-MIN_NUM_FORMS':0,
+                    'steps-MAX_NUM_FORMS':1000,
+                }
 
     def test_create_recipe_exists(self):
         # user must be logged in to create a recipe
@@ -101,8 +107,11 @@ class RecipeCreateViewTests(TestCase):
 
     def test_redirect_to_recipe_detail_view_on_create(self):
         self.client.login(**self.credentials)
+        data = {'title': 'Tomato Soup'}
+        data.update(self.base_steps_managementform)
+
         response = self.client.post(reverse('create_recipe'),
-                data={'title': 'Tomato Soup'}, follow=True)
+                data=data, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertRedirects(response, reverse('show_recipe', args=[recipe.pk]))
         self.assertIn('Tomato Soup', response.content.decode())
@@ -110,8 +119,11 @@ class RecipeCreateViewTests(TestCase):
 
     def test_can_save_a_POST_request(self):
         self.client.login(**self.credentials)
+        data = {'title': 'Tomato Soup'}
+        data.update(self.base_steps_managementform)
+
         response = self.client.post(reverse('create_recipe'),
-                data={'title': 'Tomato Soup'})
+                data=data)
 
         self.assertEqual(Recipe.objects.count(), 1)
         new_recipe = Recipe.objects.first()
@@ -132,8 +144,11 @@ class RecipeCreateViewTests(TestCase):
 
     def test_recipes_saves_author_on_create(self):
         self.client.login(**self.credentials)
+        data = {'title': 'Tomato Soup'}
+        data.update(self.base_steps_managementform)
+
         response = self.client.post(reverse('create_recipe'),
-                data={'title': 'Tomato Soup'}, follow=True)
+                data=data, follow=True)
         recipe = Recipe.objects.get(title='Tomato Soup')
         self.assertIsNotNone(recipe.author)
         self.assertTrue(isinstance(recipe.author, Profile))
@@ -142,6 +157,17 @@ class RecipeCreateViewTests(TestCase):
         self.client.login(**self.credentials)
         response = self.client.get(reverse('create_recipe'))
         self.assertIsInstance(response.context['form'], RecipeForm)
+
+    def test_can_add_step(self):
+        self.client.login(**self.credentials)
+        data = {'title': 'Grilled Cheese'}
+        data.update(self.base_steps_managementform)
+        data.update({'steps-TOTAL_FORMS':1, 'steps-0-body':'Grill the cheese.'})
+
+        response = self.client.post(reverse('create_recipe'),
+                data=data, follow=True)
+        recipe = Recipe.objects.get(title='Grilled Cheese')
+        self.assertEqual(recipe.steps.first().body, 'Grill the cheese.')
 
 
 class RecipeShowViewTest(TestCase):
@@ -176,6 +202,13 @@ class RecipeEditViewTest(TestCase):
         self.test_recipe = Recipe(title='Tomato Soup', author=self.test_user.profile)
         self.test_recipe.save()
 
+        self.base_steps_managementform = {
+                    'steps-TOTAL_FORMS':0,
+                    'steps-INITIAL_FORMS':0,
+                    'steps-MIN_NUM_FORMS':0,
+                    'steps-MAX_NUM_FORMS':1000,
+                }
+
     def test_edit_recipe_exists(self):
         self.client.login(**self.credentials)
         response = self.client.get(reverse('edit_recipe', args=[self.test_recipe.pk]))
@@ -189,8 +222,11 @@ class RecipeEditViewTest(TestCase):
 
     def test_saves_updates_to_recipe(self):
         self.client.login(**self.credentials)
+        data = {'title': 'Tomato Bisque'}
+        data.update(self.base_steps_managementform)
+
         response = self.client.post(reverse('edit_recipe', args=[self.test_recipe.pk]),
-                data={'title':'Tomato Bisque'}, follow=True)
+                data=data, follow=True)
         self.test_recipe.refresh_from_db()
         self.assertEquals(self.test_recipe.title, 'Tomato Bisque')
 
@@ -216,6 +252,31 @@ class RecipeEditViewTest(TestCase):
                 follow=True)
         self.test_recipe.refresh_from_db()
         self.assertEquals(self.test_recipe.title, 'Tomato Soup')
+
+    def test_can_edit_steps(self):
+        self.client.login(**self.credentials)
+
+        step = RecipeStep.objects.create(body='Eat the soup.')
+        self.test_recipe.steps.add(step)
+        self.assertEqual(self.test_recipe.steps.count(), 1)
+
+        data = {'title': 'Tomato Soup'}
+        data.update(self.base_steps_managementform)
+        data.update({
+            'steps-TOTAL_FORMS': 2,
+            'steps-INITIAL_FORMS': 1,
+            'steps-0-id': step.pk,
+            'steps-0-recipe': self.test_recipe.pk,
+            'steps-0-body': 'Drink the soup.'
+            })
+
+        response = self.client.post(reverse('edit_recipe', args=[self.test_recipe.pk]),
+                data=data, follow=True)
+
+        self.test_recipe.refresh_from_db()
+        self.assertEqual(self.test_recipe.steps.count(), 1)
+        self.assertEquals(self.test_recipe.steps.first().body, 'Drink the soup.')
+
 
 
 class RecipeRemoveViewTest(TestCase):

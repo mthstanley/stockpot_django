@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
 import time
 
-from recipes.models import Recipe
+from recipes.models import Recipe, RecipeStep
 
 MAX_WAIT = 10
 
@@ -156,13 +156,18 @@ class NewVisitorTest(LiveServerTestCase):
 
         # he fills out the recipe title in the form
         recipe_title = 'Tomato Soup'
+        recipe_step = 'Make the soup.'
         title_input = self.browser.find_element_by_id('id_title')
         title_input.send_keys(recipe_title)
+        step_textarea = self.browser.find_element_by_id('id_steps-0-body')
+        step_textarea.send_keys(recipe_step)
         self.browser.find_element_by_css_selector('button[type="submit"]').click()
 
         # when he hits submit he is redirected to the detail view of the recipe
         header_text = self.browser.find_element_by_tag_name('h1').text
         self.assertIn(recipe_title, header_text)
+        steps = self.browser.find_elements_by_css_selector('li.step')
+        self.assertIn(recipe_step, [step.text for step in steps])
 
         # he then clicks the home link and find the list view of the recipe he created
         self.browser.find_element_by_link_text('Home').click()
@@ -198,7 +203,9 @@ class NewVisitorTest(LiveServerTestCase):
     def test_can_edit_recipe(self):
         self.browser.get(self.live_server_url)
 
-        recipe = Recipe(title='Tomato Soup', author=self.user_henry.profile)
+        step = RecipeStep.objects.create(body='Make the soup.')
+        recipe = Recipe.objects.create(title='Tomato Soup', author=self.user_henry.profile)
+        recipe.steps.add(step)
         recipe.save()
 
         # henry would like to edit a recipe he previously created
@@ -209,13 +216,18 @@ class NewVisitorTest(LiveServerTestCase):
         self.browser.find_element_by_link_text('Edit').click()
 
         title_input = self.browser.find_element_by_id('id_title')
+        step_textarea = self.browser.find_element_by_id('id_steps-0-body')
         # he deletes the text in the prepopulated title field
         title_input.clear()
+        step_textarea.clear()
         title_input.send_keys('Tomato Bisque')
+        step_textarea.send_keys('Eat the soup.')
         self.browser.find_element_by_css_selector('button[type=submit]').click()
 
         recipe_title = self.browser.find_element_by_tag_name('h1')
         self.assertEqual(recipe_title.text, 'Tomato Bisque')
+        steps = self.browser.find_elements_by_css_selector('li.step')
+        self.assertIn('Eat the soup.', [step.text for step in steps])
 
     def test_can_delete_recipe(self):
         self.browser.get(self.live_server_url)

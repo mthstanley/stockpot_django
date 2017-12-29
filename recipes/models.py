@@ -19,5 +19,9 @@ class RecipeStep(models.Model):
 
 
 class MeasuredIngredient(models.Model):
+    UNIT_CHOICES = (('c', 'cup'),)
+
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    amount = models.DecimalField(default=0, max_digits=6, decimal_places=3)
+    units = models.CharField(max_length=128, choices=UNIT_CHOICES, blank=True)

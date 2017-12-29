@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
 import time
 
-from recipes.models import Recipe, RecipeStep
+from recipes.models import Recipe, RecipeStep, Ingredient, MeasuredIngredient
 
 MAX_WAIT = 10
 
@@ -57,6 +57,20 @@ class NewVisitorTest(LiveServerTestCase):
         except NoSuchElementException:
             return False
         return True
+
+    def fill_out_step(self, pk, text):
+        step_textarea = self.browser.find_element_by_id(f'id_steps-{pk}-body')
+        step_textarea.send_keys(text)
+
+    def fill_out_ingredient(self, pk, amount, units, name):
+        ingredient_amount_input = self.browser.find_element_by_id(f'id_measuredingredient_set-{pk}-amount')
+        ingredient_amount_input.send_keys(str(amount))
+
+        ingredient_units_input = self.browser.find_element_by_id(f'id_measuredingredient_set-{pk}-units')
+        ingredient_units_input.send_keys(units)
+
+        ingredient_ingredient_input = self.browser.find_element_by_id(f'id_measuredingredient_set-{pk}-ingredient')
+        ingredient_ingredient_input.send_keys(name)
 
     def test_can_visit_website(self):
 
@@ -155,32 +169,42 @@ class NewVisitorTest(LiveServerTestCase):
         self.assertIn(reverse('create_recipe'), self.browser.current_url)
 
         # he fills out the recipe title in the form
-        recipe_title = 'Tomato Soup'
-        recipe_step = 'Make the soup.'
+        recipe_data = {
+            'title': 'Tomato Soup',
+            'step_body': 'Make the soup.',
+            'ingredient_name': 'tomato puree',
+            'ingredient_amount': 1.5,
+            'ingredient_units': 'c'
+        }
         title_input = self.browser.find_element_by_id('id_title')
-        title_input.send_keys(recipe_title)
-        step_textarea = self.browser.find_element_by_id('id_steps-0-body')
-        step_textarea.send_keys(recipe_step)
+        title_input.send_keys(recipe_data['title'])
+        self.fill_out_step(0, recipe_data['step_body'])
+        self.fill_out_ingredient(0, recipe_data['ingredient_amount'],
+                recipe_data['ingredient_units'], recipe_data['ingredient_name'])
         self.browser.find_element_by_css_selector('button[type="submit"]').click()
 
         # when he hits submit he is redirected to the detail view of the recipe
         header_text = self.browser.find_element_by_tag_name('h1').text
-        self.assertIn(recipe_title, header_text)
+        self.assertIn(recipe_data['title'], header_text)
         steps = self.browser.find_elements_by_css_selector('li.step')
-        self.assertIn(recipe_step, [step.text for step in steps])
+        self.assertIn(recipe_data['step_body'], [step.text for step in steps])
+        ingredients = self.browser.find_elements_by_css_selector('li.ingredient')
+        self.assertIn(str(recipe_data['ingredient_amount']), ingredients[0].text)
+        self.assertIn(recipe_data['ingredient_units'], ingredients[0].text)
+        self.assertIn(recipe_data['ingredient_name'], ingredients[0].text)
 
         # he then clicks the home link and find the list view of the recipe he created
         self.browser.find_element_by_link_text('Home').click()
         recipe_list = self.browser.find_element_by_id('id_recipe_list')
         recipes = recipe_list.find_elements_by_tag_name('li')
-        self.assertIn(recipe_title, [recipe.find_element_by_tag_name('h1').text for recipe in recipes])
+        self.assertIn(recipe_data['title'], [recipe.find_element_by_tag_name('h1').text for recipe in recipes])
 
         # he also notices that it also displays his username as the author of the recipe
         self.assertIn(self.henry_credentials['username'], recipes[0].find_element_by_tag_name('h2').text)
 
         # he then clicks the recipe title and is brought back to the recipe detail page
-        created_recipe = Recipe.objects.get(title=recipe_title)
-        recipes[0].find_element_by_link_text(recipe_title).click()
+        created_recipe = Recipe.objects.get(title=recipe_data['title'])
+        recipes[0].find_element_by_link_text(recipe_data['title']).click()
         self.assertIn(reverse('show_recipe', args=[created_recipe.pk]), self.browser.current_url)
 
     def test_user_profile_page(self):
@@ -203,10 +227,12 @@ class NewVisitorTest(LiveServerTestCase):
     def test_can_edit_recipe(self):
         self.browser.get(self.live_server_url)
 
+        ingredient = Ingredient.objects.create(name='tomato juice')
         step = RecipeStep.objects.create(body='Make the soup.')
         recipe = Recipe.objects.create(title='Tomato Soup', author=self.user_henry.profile)
         recipe.steps.add(step)
         recipe.save()
+        mi = MeasuredIngredient.objects.create(recipe=recipe, ingredient=ingredient, amount=1, units='c')
 
         # henry would like to edit a recipe he previously created
         self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
@@ -217,17 +243,28 @@ class NewVisitorTest(LiveServerTestCase):
 
         title_input = self.browser.find_element_by_id('id_title')
         step_textarea = self.browser.find_element_by_id('id_steps-0-body')
+
+        # he sees that the input field are prepopulated
+        self.assertEqual(step_textarea.get_attribute('value'), 'Make the soup.')
+        ingredient_amount_input = self.browser.find_element_by_id('id_measuredingredient_set-0-amount')
+        ingredient_units_input = self.browser.find_element_by_id('id_measuredingredient_set-0-units')
+        ingredient_name_input = self.browser.find_element_by_id('id_measuredingredient_set-0-ingredient')
+        self.assertEqual(ingredient_amount_input.get_attribute('value'), '1.000')
+        self.assertEqual(ingredient_units_input.get_attribute('value'), 'c')
+        self.assertEqual(ingredient_name_input.get_attribute('value'), 'tomato juice')
         # he deletes the text in the prepopulated title field
         title_input.clear()
         step_textarea.clear()
+        ingredient_name_input.clear()
         title_input.send_keys('Tomato Bisque')
         step_textarea.send_keys('Eat the soup.')
+        ingredient_name_input.send_keys('tomato puree')
         self.browser.find_element_by_css_selector('button[type=submit]').click()
 
-        recipe_title = self.browser.find_element_by_tag_name('h1')
-        self.assertEqual(recipe_title.text, 'Tomato Bisque')
-        steps = self.browser.find_elements_by_css_selector('li.step')
-        self.assertIn('Eat the soup.', [step.text for step in steps])
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.title, 'Tomato Bisque')
+        self.assertEqual(recipe.steps.first().body, 'Eat the soup.')
+        self.assertEqual(recipe.measuredingredient_set.first().ingredient.name, 'tomato puree')
 
     def test_can_delete_recipe(self):
         self.browser.get(self.live_server_url)

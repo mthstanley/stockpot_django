@@ -4,8 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.forms import inlineformset_factory
 
-from .models import Recipe, RecipeStep
-from .forms import RecipeForm
+from .models import Recipe, RecipeStep, MeasuredIngredient
+from .forms import RecipeForm, MeasuredIngredientForm
 
 # Create your views here.
 def home(request):
@@ -14,22 +14,34 @@ def home(request):
 
 @login_required
 def create_recipe(request):
+
     StepFormSet = inlineformset_factory(Recipe, RecipeStep, fields=('body',),
             extra=1, can_delete=False)
+
+    IngredientFormSet = inlineformset_factory(Recipe, MeasuredIngredient,
+            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1, can_delete=False)
+
     if request.method == 'POST':
         form = RecipeForm(request.POST)
         form.stepsformset = StepFormSet(request.POST, request.FILES)
-        if form.is_valid():
+        form.ingredientsformset = IngredientFormSet(request.POST, request.FILES)
+
+        if form.is_valid() and form.stepsformset.is_valid() and form.ingredientsformset.is_valid():
             recipe = form.save(commit=False)
             recipe.author = request.user.profile
             recipe.save()
-            if form.stepsformset.is_valid():
-                form.stepsformset.instance = recipe
-                form.stepsformset.save()
+
+            form.stepsformset.instance = recipe
+            form.stepsformset.save()
+
+            form.ingredientsformset.instance = recipe
+            form.ingredientsformset.save()
+
             return redirect('show_recipe', pk=recipe.pk)
     else:
         form = RecipeForm()
         form.stepsformset = StepFormSet()
+        form.ingredientsformset = IngredientFormSet()
 
     return render(request, 'create_recipe.html', {'form':form})
 
@@ -42,14 +54,21 @@ def edit_recipe(request, pk):
     StepFormSet = inlineformset_factory(Recipe, RecipeStep, fields=('body',),
             extra=1, can_delete=False)
 
+    IngredientFormSet = inlineformset_factory(Recipe, MeasuredIngredient,
+            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1, can_delete=False)
+
     form = RecipeForm(request.POST or None, instance=recipe)
     form.stepsformset = StepFormSet(request.POST or None, request.FILES or None,
             instance=recipe)
-    if form.is_valid():
+    form.ingredientsformset = IngredientFormSet(request.POST or None, request.FILES or None,
+            instance=recipe)
+    if form.is_valid() and form.stepsformset.is_valid() and form.ingredientsformset.is_valid():
         form.save()
-        if form.stepsformset.is_valid():
-            form.stepsformset.save()
+        form.stepsformset.save()
+        form.ingredientsformset.save()
+
         return redirect('show_recipe', pk=recipe.pk)
+
     return render(request, 'edit_recipe.html', {'form':form})
 
 @login_required

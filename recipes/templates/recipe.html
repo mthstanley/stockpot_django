@@ -6,6 +6,12 @@
 <h2>{{ recipe.author.user.username }}</h2>
 
 {% if detail %}
+    <h3>Ingredients</h3>
+    <ul class="ingredients">
+    {% for ingredient in recipe.measuredingredient_set.all %}
+        <li class="ingredient">{{ ingredient.amount.normalize }} {{ ingredient.get_units_display }} {{ ingredient.ingredient.name }}</li>
+    {% endfor %}
+    </ul>
 
     <h3>Steps</h3>
     <ul class="steps">

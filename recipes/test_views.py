@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 
 
 from .views import home
-from .models import Recipe, RecipeStep
+from .models import Recipe, RecipeStep, Ingredient, MeasuredIngredient
 from .forms import RecipeForm
 from users.models import Profile
 
@@ -93,6 +93,12 @@ class RecipeCreateViewTests(TestCase):
                     'steps-MIN_NUM_FORMS':0,
                     'steps-MAX_NUM_FORMS':1000,
                 }
+        self.base_measuredingredient_managementform = {
+                    'measuredingredient_set-TOTAL_FORMS':0,
+                    'measuredingredient_set-INITIAL_FORMS':0,
+                    'measuredingredient_set-MIN_NUM_FORMS':0,
+                    'measuredingredient_set-MAX_NUM_FORMS':1000,
+                }
 
     def test_create_recipe_exists(self):
         # user must be logged in to create a recipe
@@ -109,6 +115,7 @@ class RecipeCreateViewTests(TestCase):
         self.client.login(**self.credentials)
         data = {'title': 'Tomato Soup'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
 
         response = self.client.post(reverse('create_recipe'),
                 data=data, follow=True)
@@ -121,6 +128,7 @@ class RecipeCreateViewTests(TestCase):
         self.client.login(**self.credentials)
         data = {'title': 'Tomato Soup'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
 
         response = self.client.post(reverse('create_recipe'),
                 data=data)
@@ -146,6 +154,7 @@ class RecipeCreateViewTests(TestCase):
         self.client.login(**self.credentials)
         data = {'title': 'Tomato Soup'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
 
         response = self.client.post(reverse('create_recipe'),
                 data=data, follow=True)
@@ -162,12 +171,33 @@ class RecipeCreateViewTests(TestCase):
         self.client.login(**self.credentials)
         data = {'title': 'Grilled Cheese'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
         data.update({'steps-TOTAL_FORMS':1, 'steps-0-body':'Grill the cheese.'})
 
         response = self.client.post(reverse('create_recipe'),
                 data=data, follow=True)
         recipe = Recipe.objects.get(title='Grilled Cheese')
         self.assertEqual(recipe.steps.first().body, 'Grill the cheese.')
+
+    def test_can_add_ingredient(self):
+        self.client.login(**self.credentials)
+        data = {'title': 'Grilled Cheese'}
+        data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
+        data.update({
+            'measuredingredient_set-TOTAL_FORMS': 1,
+            'measuredingredient_set-0-amount': 1.5,
+            'measuredingredient_set-0-units': 'c',
+            'measuredingredient_set-0-ingredient': 'cheese'
+        })
+
+        response = self.client.post(reverse('create_recipe'),
+                data=data, follow=True)
+        recipe = Recipe.objects.get(title='Grilled Cheese')
+        self.assertEqual(recipe.measuredingredient_set.first().ingredient.name, 'cheese')
+        self.assertEqual(recipe.measuredingredient_set.first().amount, 1.5)
+        self.assertEqual(recipe.measuredingredient_set.first().units, 'c')
+
 
 
 class RecipeShowViewTest(TestCase):
@@ -208,6 +238,12 @@ class RecipeEditViewTest(TestCase):
                     'steps-MIN_NUM_FORMS':0,
                     'steps-MAX_NUM_FORMS':1000,
                 }
+        self.base_measuredingredient_managementform = {
+                    'measuredingredient_set-TOTAL_FORMS':0,
+                    'measuredingredient_set-INITIAL_FORMS':0,
+                    'measuredingredient_set-MIN_NUM_FORMS':0,
+                    'measuredingredient_set-MAX_NUM_FORMS':1000,
+                }
 
     def test_edit_recipe_exists(self):
         self.client.login(**self.credentials)
@@ -224,6 +260,7 @@ class RecipeEditViewTest(TestCase):
         self.client.login(**self.credentials)
         data = {'title': 'Tomato Bisque'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
 
         response = self.client.post(reverse('edit_recipe', args=[self.test_recipe.pk]),
                 data=data, follow=True)
@@ -262,6 +299,7 @@ class RecipeEditViewTest(TestCase):
 
         data = {'title': 'Tomato Soup'}
         data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
         data.update({
             'steps-TOTAL_FORMS': 2,
             'steps-INITIAL_FORMS': 1,
@@ -277,6 +315,36 @@ class RecipeEditViewTest(TestCase):
         self.assertEqual(self.test_recipe.steps.count(), 1)
         self.assertEquals(self.test_recipe.steps.first().body, 'Drink the soup.')
 
+    def test_can_edit_ingredients(self):
+        self.client.login(**self.credentials)
+
+        ingredient = Ingredient.objects.create(name='tomato')
+        mi_old = MeasuredIngredient.objects.create(recipe=self.test_recipe, amount=1.0, units='c', ingredient=ingredient)
+        self.assertEqual(self.test_recipe.measuredingredient_set.count(), 1)
+
+        data = {'title': 'Tomato Soup'}
+        data.update(self.base_steps_managementform)
+        data.update(self.base_measuredingredient_managementform)
+        data.update({
+            'measuredingredient_set-TOTAL_FORMS': 1,
+            'measuredingredient_set-INITIAL_FORMS': 1,
+            'measuredingredient_set-0-id': mi_old.pk,
+            'measuredingredient_set-0-recipe': self.test_recipe.pk,
+            'measuredingredient_set-0-ingredient': 'butter',
+            'measuredingredient_set-0-amount': 2.0,
+            'measuredingredient_set-0-units': 'c'
+        })
+
+        response = self.client.post(reverse('edit_recipe', args=[self.test_recipe.pk]),
+                data=data, follow=True)
+
+        self.test_recipe.refresh_from_db()
+        mi_new = self.test_recipe.measuredingredient_set.first()
+        self.assertEqual(self.test_recipe.measuredingredient_set.count(), 1)
+        self.assertEqual(Ingredient.objects.count(), 2)
+        self.assertEqual(mi_new.amount, 2.0)
+        self.assertEqual(mi_new.units, 'c')
+        self.assertEqual(mi_new.ingredient.name, 'butter')
 
 
 class RecipeRemoveViewTest(TestCase):

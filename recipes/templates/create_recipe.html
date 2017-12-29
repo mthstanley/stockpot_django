@@ -6,6 +6,12 @@
         {% csrf_token %}
         {{ form.as_p }}
 
+        <h2>Ingredients</h2>
+        {{ form.ingredientsformset.management_form }}
+        {% for form in form.ingredientsformset %}
+            <p>{{ form }}</p>
+        {% endfor %}
+
         <h2>Steps</h2>
         {{ form.stepsformset.management_form }}
         {% for form in form.stepsformset %}

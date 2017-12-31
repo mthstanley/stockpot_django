@@ -16,10 +16,10 @@ def home(request):
 def create_recipe(request):
 
     StepFormSet = inlineformset_factory(Recipe, RecipeStep, fields=('body',),
-            extra=1, can_delete=False)
+            extra=1)
 
     IngredientFormSet = inlineformset_factory(Recipe, MeasuredIngredient,
-            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1, can_delete=False)
+            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1)
 
     if request.method == 'POST':
         form = RecipeForm(request.POST)
@@ -52,16 +52,17 @@ def edit_recipe(request, pk):
         raise PermissionDenied
 
     StepFormSet = inlineformset_factory(Recipe, RecipeStep, fields=('body',),
-            extra=1, can_delete=False)
+            extra=1)
 
     IngredientFormSet = inlineformset_factory(Recipe, MeasuredIngredient,
-            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1, can_delete=False)
+            form=MeasuredIngredientForm, fields=('amount', 'units', 'ingredient'), extra=1)
 
     form = RecipeForm(request.POST or None, instance=recipe)
     form.stepsformset = StepFormSet(request.POST or None, request.FILES or None,
             instance=recipe)
     form.ingredientsformset = IngredientFormSet(request.POST or None, request.FILES or None,
             instance=recipe)
+
     if form.is_valid() and form.stepsformset.is_valid() and form.ingredientsformset.is_valid():
         form.save()
         form.stepsformset.save()

@@ -1,17 +1,21 @@
 from django.test import LiveServerTestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 
 from recipes.models import Recipe, RecipeStep, Ingredient, MeasuredIngredient
 
 MAX_WAIT = 10
 
-class NewVisitorTest(LiveServerTestCase):
+class NewVisitorTest(StaticLiveServerTestCase):
 
     def setUp(self):
         self.browser = webdriver.Firefox()
@@ -299,4 +303,56 @@ class NewVisitorTest(LiveServerTestCase):
 
         self.assertIn(BIO, self.browser.page_source)
 
+    def test_dynamic_formset_recipe_creation(self):
+        self.browser.get(self.live_server_url)
 
+        recipe = Recipe.objects.create(title='test recipe', author=self.user_henry.profile)
+        step = RecipeStep.objects.create(body='step 1')
+        ing = Ingredient.objects.create(name='potato')
+        mi = MeasuredIngredient.objects.create(amount=1, units='c', ingredient=ing, recipe=recipe)
+        recipe.steps.add(step)
+        recipe.save()
+
+        self.login_user(self.henry_credentials['username'], self.henry_credentials['password'])
+
+        self.browser.get(self.live_server_url + reverse('edit_recipe', args=[recipe.pk]))
+
+        WebDriverWait(self.browser, MAX_WAIT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '.ingredient-formsets .add-row'))
+        )
+
+        ingredient_add_row = self.browser.find_element_by_css_selector('.ingredient-formsets .add-row')
+        step_add_row = self.browser.find_element_by_css_selector('.step-formsets .add-row')
+
+        self.fill_out_ingredient(1, 1.5, 'c', 'butter')
+        self.fill_out_step(1, 'step 2')
+
+        ingredient_add_row.click()
+        self.fill_out_ingredient(2, 3, 'c', 'sugar')
+
+        step_add_row.click()
+        self.fill_out_step(2, 'step 3')
+
+        self.browser.find_element_by_css_selector('button[type=submit]').click()
+
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.steps.count(), 3)
+        self.assertEqual(recipe.measuredingredient_set.count(), 3)
+
+        self.browser.get(self.live_server_url + reverse('edit_recipe', args=[recipe.pk]))
+
+        WebDriverWait(self.browser, MAX_WAIT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, '.ingredient-formsets .add-row'))
+        )
+
+        ingredient_formset = self.browser.find_element_by_css_selector('.ingredient-formsets p')
+        ingredient_formset.find_element_by_css_selector('.delete-row').click()
+
+        step_formset = self.browser.find_element_by_css_selector('.step-formsets p')
+        step_formset.find_element_by_css_selector('.delete-row').click()
+
+        self.browser.find_element_by_css_selector('button[type=submit]').click()
+
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.steps.count(), 2)
+        self.assertEqual(recipe.measuredingredient_set.count(), 2)

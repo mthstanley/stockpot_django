@@ -1,0 +1,41 @@
+{% load static %}
+{% comment %}
+    turn off autocomplete on form so that the browser (firefox) does not
+    remember values for management form, otherwise values become out of 
+    sync from dynamically adding fields and then refreshing the page
+{% endcomment %}
+<form method="POST" class="recipe-form" autocomplete="off">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <h2>Ingredients</h2>
+    <div class="ingredient-formsets">
+    {{ form.ingredientsformset.management_form }}
+    {% for form in form.ingredientsformset %}
+        <p class="ingredient-formset">{{ form }}</p>
+    {% endfor %}
+    </div>
+
+    <h2>Steps</h2>
+    <div class="step-formsets">
+    {{ form.stepsformset.management_form }}
+    {% for form in form.stepsformset %}
+        <p class="step-formset">{{ form }}</p>
+    {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-default">{{ submit_btn_text }}</button>
+    <script type="text/javascript" src="{% static "js/jquery.formset.js" %}"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('.ingredient-formsets p').formset({
+                prefix: '{{ form.ingredientsformset.prefix }}',
+                formCssClass: 'ingredient-dynamic-formset'
+            });
+            
+            $('.step-formsets p').formset({
+                prefix: '{{ form.stepsformset.prefix }}',
+                formCssClass: 'step-dynamic-formset'
+            });
+        })
+    </script>
+</form>
